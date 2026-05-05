@@ -1,5 +1,9 @@
 # FreellazSim
 Sistema que simula um marketplace de frelancers
+## Integrantes
+- Felipe Lopes Gomide
+- João Correia Costa
+- Mateus Cursino Gomes Costa
 ## Explicação do sistema
 O sistema será um marketplace simplificado inspirado no Fiverr, conectando freelancers e clientes. As funcionalidades centrais incluem cadastro de usuários, publicação de anúncios de serviços e um fluxo básico de contratação. O projeto é estruturado para priorizar a testabilidade, utilizando uma suíte de testes automatizados para validar regras de negócio e fluxos de interface, demonstrando como a cobertura de testes facilita a manutenção.
 ## Explicação das tecnologias utilizadas
