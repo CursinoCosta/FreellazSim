@@ -14,6 +14,13 @@ class Usuario(SQLModel, table=True):
     is_freelancer: bool = Field(default=False)
     saldo_conta: float = Field(default=0.0)
 
+class Servico(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    titulo: str = Field(index=True)
+    descricao: str
+    preco: float
+    freelancer_id: int = Field(foreign_key="usuario.id")
+
 # --- CONFIGURAÇÃO DO BANCO ---
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -37,8 +44,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# --- ROTAS (ENDPOINTS) ---
-
+# --- ROTAS DE USUÁRIOS ---
 @app.post("/usuarios/")
 def create_usuario(usuario: Usuario, session: SessionDep) -> Usuario:
     session.add(usuario)
@@ -55,9 +61,24 @@ def read_usuario(usuario_id: int, session: SessionDep) -> Usuario:
 
 @app.get("/usuarios/")
 def list_usuarios(
-    session: SessionDep,
-    offset: int = 0,
-    limit: Annotated[int, Query(le=100)] = 100,
+    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
 ) -> Sequence[Usuario]:
-    usuarios = session.exec(select(Usuario).offset(offset).limit(limit)).all()
-    return usuarios
+    return session.exec(select(Usuario).offset(offset).limit(limit)).all()
+
+# --- ROTAS DE SERVIÇOS ---
+@app.post("/servicos/")
+def create_servico(servico: Servico, session: SessionDep) -> Servico:
+    # Regra de negócio: Preço não pode ser negativo ou zero
+    if servico.preco <= 0:
+        raise HTTPException(status_code=400, detail="O preço deve ser maior que zero")
+    
+    session.add(servico)
+    session.commit()
+    session.refresh(servico)
+    return servico
+
+@app.get("/servicos/")
+def list_servicos(
+    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
+) -> Sequence[Servico]:
+    return session.exec(select(Servico).offset(offset).limit(limit)).all()
