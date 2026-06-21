@@ -30,13 +30,14 @@ jobs:
         pip install fastapi[standard] sqlmodel pytest pytest-cov httpx
 
     - name: Executar Pytest com Cobertura
+      working-directory: ./backend
       run: |
-        pytest backend/ --cov=backend/ --cov-report=xml
+        pytest test/ --cov=src/ --cov-report=xml
 
     - name: Upload da Cobertura para o Codecov
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        file: ./backend/coverage.xml 
         flags: backend
         fail_ci_if_error: true
