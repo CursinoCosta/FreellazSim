@@ -104,3 +104,31 @@ def test_create_servico_preco_invalido(client: TestClient):
     )
     assert response.status_code == 400
     assert response.json() == {"detail": "O preço deve ser maior que zero"}
+
+def test_fluxo_completo_contrato_e_repasse(client: TestClient):
+    """Teste de integração: valida a criação do contrato e a atualização correta do saldo."""
+    # 1. Cria Freelancer
+    res_freela = client.post("/usuarios/", json={"nome": "Freela", "email": "freela@f.com", "senha": "1", "is_freelancer": True})
+    freela_id = res_freela.json()["id"]
+
+    # 2. Cria Cliente
+    res_cliente = client.post("/usuarios/", json={"nome": "Cliente", "email": "cliente@c.com", "senha": "1", "is_freelancer": False})
+    cliente_id = res_cliente.json()["id"]
+
+    # 3. Cria Serviço
+    res_servico = client.post("/servicos/", json={"titulo": "Site", "descricao": "React", "preco": 1000.0, "freelancer_id": freela_id})
+    servico_id = res_servico.json()["id"]
+
+    # 4. Cria Contrato
+    res_contrato = client.post("/contratos/", json={"servico_id": servico_id, "cliente_id": cliente_id, "valor_pago": 1000.0})
+    assert res_contrato.status_code == 200
+    contrato_id = res_contrato.json()["id"]
+
+    # 5. Valida Contrato (Patch)
+    res_validar = client.patch(f"/contratos/{contrato_id}/validar")
+    assert res_validar.status_code == 200
+    assert res_validar.json()["contrato"]["status"] == "validado"
+
+    # 6. Checa saldo do Freelancer (Deve ser 900.0, já que a taxa é 10%)
+    res_freela_atualizado = client.get(f"/usuarios/{freela_id}")
+    assert res_freela_atualizado.json()["saldo_conta"] == 900.0
