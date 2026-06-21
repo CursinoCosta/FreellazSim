@@ -114,21 +114,86 @@ def test_fluxo_completo_contrato_e_repasse(client: TestClient):
     # 2. Cria Cliente
     res_cliente = client.post("/usuarios/", json={"nome": "Cliente", "email": "cliente@c.com", "senha": "1", "is_freelancer": False})
     cliente_id = res_cliente.json()["id"]
+    
+    # 3. Deposita fundos na conta do Cliente (NOVO PASSO)
+    client.patch(f"/usuarios/{cliente_id}/depositar", json={"valor": 1000.0})
 
-    # 3. Cria Serviço
+    # 4. Cria Serviço
     res_servico = client.post("/servicos/", json={"titulo": "Site", "descricao": "React", "preco": 1000.0, "freelancer_id": freela_id})
     servico_id = res_servico.json()["id"]
 
-    # 4. Cria Contrato
+    # 5. Cria Contrato
     res_contrato = client.post("/contratos/", json={"servico_id": servico_id, "cliente_id": cliente_id, "valor_pago": 1000.0})
     assert res_contrato.status_code == 200
     contrato_id = res_contrato.json()["id"]
 
-    # 5. Valida Contrato (Patch)
+    # 6. Valida Contrato (Patch)
     res_validar = client.patch(f"/contratos/{contrato_id}/validar")
     assert res_validar.status_code == 200
     assert res_validar.json()["contrato"]["status"] == "validado"
 
-    # 6. Checa saldo do Freelancer (Deve ser 900.0, já que a taxa é 10%)
+    # 7. Checa saldo do Freelancer (Deve ser 900.0, já que a taxa é 10%)
     res_freela_atualizado = client.get(f"/usuarios/{freela_id}")
     assert res_freela_atualizado.json()["saldo_conta"] == 900.0
+
+def test_depositar_fundos(client: TestClient):
+    """Testa se o depósito incrementa o saldo corretamente."""
+    res_user = client.post("/usuarios/", json={"nome": "Investidor", "email": "inv@c.com", "senha": "1", "is_freelancer": False})
+    user_id = res_user.json()["id"]
+
+    res_deposito = client.patch(f"/usuarios/{user_id}/depositar", json={"valor": 500.0})
+    assert res_deposito.status_code == 200
+    assert res_deposito.json()["saldo_atual"] == 500.0
+
+def test_atualizar_servico(client: TestClient):
+    """Testa se o freelancer pode alterar o preço e a descrição do serviço."""
+    res_user = client.post("/usuarios/", json={"nome": "Editor", "email": "ed@f.com", "senha": "1", "is_freelancer": True})
+    user_id = res_user.json()["id"]
+
+    res_servico = client.post("/servicos/", json={"titulo": "Edição de Vídeo", "descricao": "Básico", "preco": 100.0, "freelancer_id": user_id})
+    servico_id = res_servico.json()["id"]
+
+    # Altera apenas a descrição para string vazia (removendo) e atualiza o preço
+    res_update = client.patch(f"/servicos/{servico_id}", json={"descricao": "", "preco": 150.0})
+    assert res_update.status_code == 200
+    assert res_update.json()["preco"] == 150.0
+    assert res_update.json()["descricao"] == ""
+
+def test_criar_contrato_sem_saldo(client: TestClient):
+    """Testa se o sistema barra a criação de contrato se o cliente não tiver dinheiro."""
+    res_user = client.post("/usuarios/", json={"nome": "Pobre", "email": "p@p.com", "senha": "1", "is_freelancer": False})
+    cliente_id = res_user.json()["id"]
+    
+    # Criamos um serviço qualquer
+    res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f2@f.com", "senha": "1", "is_freelancer": True})
+    res_servico = client.post("/servicos/", json={"titulo": "S", "descricao": "D", "preco": 500.0, "freelancer_id": res_freela.json()["id"]})
+
+    res_contrato = client.post("/contratos/", json={"servico_id": res_servico.json()["id"], "cliente_id": cliente_id, "valor_pago": 500.0})
+    assert res_contrato.status_code == 400
+    assert res_contrato.json()["detail"] == "Saldo insuficiente para contratar este serviço"
+
+def test_cancelar_contrato_e_estorno(client: TestClient):
+    """Testa o cancelamento de um contrato e a devolução do dinheiro para o cliente."""
+    res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f3@f.com", "senha": "1", "is_freelancer": True})
+    freela_id = res_freela.json()["id"]
+    
+    res_cliente = client.post("/usuarios/", json={"nome": "C", "email": "c3@c.com", "senha": "1", "is_freelancer": False})
+    cliente_id = res_cliente.json()["id"]
+    
+    # Adiciona fundos para o cliente
+    client.patch(f"/usuarios/{cliente_id}/depositar", json={"valor": 200.0})
+
+    res_servico = client.post("/servicos/", json={"titulo": "S", "descricao": "D", "preco": 200.0, "freelancer_id": freela_id})
+    servico_id = res_servico.json()["id"]
+
+    res_contrato = client.post("/contratos/", json={"servico_id": servico_id, "cliente_id": cliente_id, "valor_pago": 200.0})
+    contrato_id = res_contrato.json()["id"]
+
+    # Cancela o contrato
+    res_cancelar = client.patch(f"/contratos/{contrato_id}/cancelar")
+    assert res_cancelar.status_code == 200
+    assert res_cancelar.json()["contrato"]["status"] == "cancelado"
+
+    # Verifica se o cliente recebeu os 200 de volta
+    cliente_atualizado = client.get(f"/usuarios/{cliente_id}")
+    assert cliente_atualizado.json()["saldo_conta"] == 200.0
