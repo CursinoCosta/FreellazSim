@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+from fastapi.middleware.cors import CORSMiddleware
 
 # --- MODELAGEM DE DADOS ---
 class Usuario(SQLModel, table=True):
@@ -54,6 +55,15 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+# Configuração de CORS para permitir que o React se comunique com a API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Porta padrão do Vite/React
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- ROTAS DE USUÁRIOS ---
 @app.post("/usuarios/")
