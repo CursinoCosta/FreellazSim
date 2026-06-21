@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from fastapi.middleware.cors import CORSMiddleware
 
-# --- MODELAGEM DE DADOS ---
+# --- ESQUEMAS DE DADOS (Pydantic/SQLModel) ---
 class Usuario(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nome: str = Field(index=True)
@@ -15,6 +15,9 @@ class Usuario(SQLModel, table=True):
     is_freelancer: bool = Field(default=False)
     saldo_conta: float = Field(default=0.0)
 
+class Deposito(SQLModel):
+    valor: float
+
 class Servico(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     titulo: str = Field(index=True)
@@ -22,21 +25,24 @@ class Servico(SQLModel, table=True):
     preco: float
     freelancer_id: int = Field(foreign_key="usuario.id")
 
+class ServicoUpdate(SQLModel):
+    descricao: str | None = None
+    preco: float | None = None
+
 class Contrato(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     servico_id: int = Field(foreign_key="servico.id")
     cliente_id: int = Field(foreign_key="usuario.id")
-    status: str = Field(default="pendente")  # Status possíveis: pendente, validado
+    status: str = Field(default="pendente")  # pendente, validado, cancelado
     valor_pago: float
 
+# --- LÓGICA DE NEGÓCIO PURA ---
 def calcular_repasse_freelancer(valor_pago: float, taxa_plataforma: float = 0.10) -> float:
-    """Calcula o valor que vai para o freelancer após a retenção da taxa da plataforma."""
     return valor_pago * (1.0 - taxa_plataforma)
 
 # --- CONFIGURAÇÃO DO BANCO ---
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
-
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
@@ -56,10 +62,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Configuração de CORS para permitir que o React se comunique com a API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Porta padrão do Vite/React
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,11 +85,20 @@ def read_usuario(usuario_id: int, session: SessionDep) -> Usuario:
         raise HTTPException(status_code=404, detail="Usuario não encontrado")
     return usuario
 
-@app.get("/usuarios/")
-def list_usuarios(
-    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
-) -> Sequence[Usuario]:
-    return session.exec(select(Usuario).offset(offset).limit(limit)).all()
+@app.patch("/usuarios/{usuario_id}/depositar")
+def depositar_fundos(usuario_id: int, deposito: Deposito, session: SessionDep):
+    if deposito.valor <= 0:
+        raise HTTPException(status_code=400, detail="Valor do depósito deve ser maior que zero")
+    
+    usuario = session.get(Usuario, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario não encontrado")
+    
+    usuario.saldo_conta += deposito.valor
+    session.add(usuario)
+    session.commit()
+    session.refresh(usuario)
+    return {"mensagem": "Fundos adicionados com sucesso", "saldo_atual": usuario.saldo_conta}
 
 # --- ROTAS DE SERVIÇOS ---
 @app.post("/servicos/")
@@ -96,6 +110,25 @@ def create_servico(servico: Servico, session: SessionDep) -> Servico:
     session.refresh(servico)
     return servico
 
+@app.patch("/servicos/{servico_id}")
+def update_servico(servico_id: int, servico_update: ServicoUpdate, session: SessionDep) -> Servico:
+    servico_db = session.get(Servico, servico_id)
+    if not servico_db:
+        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+    
+    if servico_update.preco is not None:
+        if servico_update.preco <= 0:
+            raise HTTPException(status_code=400, detail="O preço deve ser maior que zero")
+        servico_db.preco = servico_update.preco
+        
+    if servico_update.descricao is not None:
+        servico_db.descricao = servico_update.descricao
+
+    session.add(servico_db)
+    session.commit()
+    session.refresh(servico_db)
+    return servico_db
+
 @app.get("/servicos/")
 def list_servicos(
     session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
@@ -105,6 +138,24 @@ def list_servicos(
 # --- ROTAS DE CONTRATOS ---
 @app.post("/contratos/")
 def create_contrato(contrato: Contrato, session: SessionDep) -> Contrato:
+    cliente = session.get(Usuario, contrato.cliente_id)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+    servico = session.get(Servico, contrato.servico_id)
+    if not servico:
+        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+
+    # Verifica se o cliente tem saldo suficiente
+    if cliente.saldo_conta < servico.preco:
+        raise HTTPException(status_code=400, detail="Saldo insuficiente para contratar este serviço")
+
+    # Deduz o valor da conta do cliente e trava no contrato (caução)
+    cliente.saldo_conta -= servico.preco
+    contrato.valor_pago = servico.preco
+    contrato.status = "pendente"
+
+    session.add(cliente)
     session.add(contrato)
     session.commit()
     session.refresh(contrato)
@@ -115,8 +166,8 @@ def validar_contrato(contrato_id: int, session: SessionDep):
     contrato = session.get(Contrato, contrato_id)
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato não encontrado")
-    if contrato.status == "validado":
-        raise HTTPException(status_code=400, detail="Contrato já validado")
+    if contrato.status != "pendente":
+        raise HTTPException(status_code=400, detail=f"Contrato não pode ser validado (Status: {contrato.status})")
 
     servico = session.get(Servico, contrato.servico_id)
     if not servico:
@@ -136,3 +187,26 @@ def validar_contrato(contrato_id: int, session: SessionDep):
     session.refresh(contrato)
     
     return {"mensagem": "Contrato validado com sucesso", "contrato": contrato}
+
+@app.patch("/contratos/{contrato_id}/cancelar")
+def cancelar_contrato(contrato_id: int, session: SessionDep):
+    contrato = session.get(Contrato, contrato_id)
+    if not contrato:
+        raise HTTPException(status_code=404, detail="Contrato não encontrado")
+    if contrato.status != "pendente":
+        raise HTTPException(status_code=400, detail="Apenas contratos pendentes podem ser cancelados")
+
+    cliente = session.get(Usuario, contrato.cliente_id)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+
+    # Estorna o valor para o cliente
+    cliente.saldo_conta += contrato.valor_pago
+    contrato.status = "cancelado"
+
+    session.add(cliente)
+    session.add(contrato)
+    session.commit()
+    session.refresh(contrato)
+
+    return {"mensagem": "Contrato cancelado e valor estornado", "contrato": contrato}
