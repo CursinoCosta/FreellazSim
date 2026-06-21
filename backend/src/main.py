@@ -1,3 +1,4 @@
+import re
 from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -5,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import field_validator
 
 # --- ESQUEMAS DE DADOS (Pydantic/SQLModel) ---
 class Usuario(SQLModel, table=True):
@@ -14,6 +16,20 @@ class Usuario(SQLModel, table=True):
     senha: str
     is_freelancer: bool = Field(default=False)
     saldo_conta: float = Field(default=0.0)
+
+    @field_validator("senha")
+    @classmethod
+    def validar_senha(cls, v: str):
+        if len(v) < 6:
+            raise ValueError("A senha deve ter no mínimo 6 caracteres")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def validar_email(cls, v: str):
+        if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", v):
+            raise ValueError("E-mail com formato inválido")
+        return v
 
 class Deposito(SQLModel):
     valor: float
@@ -100,6 +116,12 @@ def depositar_fundos(usuario_id: int, deposito: Deposito, session: SessionDep):
     session.refresh(usuario)
     return {"mensagem": "Fundos adicionados com sucesso", "saldo_atual": usuario.saldo_conta}
 
+@app.get("/usuarios/")
+def list_usuarios(
+    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
+) -> Sequence[Usuario]:
+    return session.exec(select(Usuario).offset(offset).limit(limit)).all()
+
 # --- ROTAS DE SERVIÇOS ---
 @app.post("/servicos/")
 def create_servico(servico: Servico, session: SessionDep) -> Servico:
@@ -146,11 +168,9 @@ def create_contrato(contrato: Contrato, session: SessionDep) -> Contrato:
     if not servico:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
 
-    # Verifica se o cliente tem saldo suficiente
     if cliente.saldo_conta < servico.preco:
         raise HTTPException(status_code=400, detail="Saldo insuficiente para contratar este serviço")
 
-    # Deduz o valor da conta do cliente e trava no contrato (caução)
     cliente.saldo_conta -= servico.preco
     contrato.valor_pago = servico.preco
     contrato.status = "pendente"
@@ -200,7 +220,6 @@ def cancelar_contrato(contrato_id: int, session: SessionDep):
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
-    # Estorna o valor para o cliente
     cliente.saldo_conta += contrato.valor_pago
     contrato.status = "cancelado"
 
