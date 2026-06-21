@@ -70,3 +70,37 @@ def test_read_usuario_not_found(client: TestClient):
     response = client.get("/usuarios/999999")
     assert response.status_code == 404
     assert response.json() == {"detail": "Usuario não encontrado"}
+
+
+# (Adicione isso no final do arquivo test/test_main.py)
+
+def test_create_servico_integracao(client: TestClient):
+    """Teste de integração: valida a rota POST de serviços."""
+    # Primeiro criamos um usuário para ser o dono do serviço
+    client.post("/usuarios/", json={"nome": "Free", "email": "f@f.com", "senha": "1", "is_freelancer": True})
+    
+    response = client.post(
+        "/servicos/",
+        json={
+            "titulo": "Desenvolvimento de API",
+            "descricao": "API em FastAPI",
+            "preco": 1200.50,
+            "freelancer_id": 1
+        }
+    )
+    assert response.status_code == 200
+    assert response.json()["titulo"] == "Desenvolvimento de API"
+
+def test_create_servico_preco_invalido(client: TestClient):
+    """Teste de integração: valida a regra de negócio da rota (HTTP 400)."""
+    response = client.post(
+        "/servicos/",
+        json={
+            "titulo": "Serviço Grátis (Erro)",
+            "descricao": "Não deve passar",
+            "preco": 0,
+            "freelancer_id": 1
+        }
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "O preço deve ser maior que zero"}
