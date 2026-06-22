@@ -25,9 +25,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Instalar dependências
+      working-directory: ./backend
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi[standard] sqlmodel pytest pytest-cov httpx
+        pip install -r requirements.txt pytest pytest-cov httpx
 
     - name: Executar Pytest com Cobertura
       working-directory: ./backend
