@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import { login } from '../services/api.js'
+import { useAuth } from '../context/useAuth.js'
 import { validarEmail, validarSenha } from '../utils/validacao.js'
 import './Login.css'
 
@@ -9,6 +11,8 @@ function Login() {
   const [senha, setSenha] = useState('')
   const [senhaTocada, setSenhaTocada] = useState(false)
   const [mensagem, setMensagem] = useState(null)
+  const { entrar } = useAuth()
+  const navigate = useNavigate()
 
   const senhaValida = validarSenha(senha)
   const formularioValido = validarEmail(email) && senhaValida
@@ -18,8 +22,9 @@ function Login() {
     setMensagem(null)
 
     try {
-      await login({ email, senha })
-      setMensagem({ tipo: 'sucesso', texto: 'Login realizado com sucesso!' })
+      const { access_token, usuario } = await login({ email, senha })
+      entrar(usuario, access_token)
+      navigate(usuario.is_freelancer ? '/dashboard/freelancer' : '/dashboard/cliente')
     } catch (error) {
       setMensagem({ tipo: 'erro', texto: error.message })
     }

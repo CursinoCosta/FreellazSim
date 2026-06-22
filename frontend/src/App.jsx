@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import Cadastro from './pages/Cadastro.jsx'
@@ -9,18 +10,20 @@ import './App.css'
 
 function App() {
   return (
-    <BrowserRouter>
-      <div id="app">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/servicos/:id" element={<ServicoDetalhes />} />
-          <Route path="/dashboard/cliente" element={<DashboardCliente />} />
-          <Route path="/dashboard/freelancer" element={<DashboardFreelancer />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <div id="app">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/servicos/:id" element={<ServicoDetalhes />} />
+            <Route path="/dashboard/cliente" element={<DashboardCliente />} />
+            <Route path="/dashboard/freelancer" element={<DashboardFreelancer />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
