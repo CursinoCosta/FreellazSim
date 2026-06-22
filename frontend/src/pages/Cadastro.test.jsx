@@ -20,4 +20,16 @@ describe('Cadastro', () => {
 
     expect(screen.getByRole('button', { name: 'Cadastrar' })).toBeEnabled()
   })
+
+  it('exibe mensagem de erro quando a senha é muito curta', async () => {
+    const user = userEvent.setup()
+    render(<Cadastro />)
+
+    await user.type(screen.getByLabelText('Senha'), '123')
+    await user.tab()
+
+    expect(
+      screen.getByText('A senha deve ter no mínimo 6 caracteres')
+    ).toBeInTheDocument()
+  })
 })
