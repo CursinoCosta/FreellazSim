@@ -1,0 +1,69 @@
+.cadastro {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.cadastro-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  width: 100%;
+  margin: 48px auto;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.cadastro-form label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-top: 8px;
+}
+
+.cadastro-form input[type='text'],
+.cadastro-form input[type='email'],
+.cadastro-form input[type='password'] {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.cadastro-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400 !important;
+}
+
+.cadastro-form button {
+  margin-top: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cadastro-form button:disabled {
+  background: var(--border);
+  color: var(--text);
+  cursor: not-allowed;
+}
+
+.cadastro-mensagem {
+  font-size: 14px;
+}
+
+.cadastro-mensagem-sucesso {
+  color: var(--primary-dark);
+}
+
+.cadastro-mensagem-erro {
+  color: var(--danger);
+}
