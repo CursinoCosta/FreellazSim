@@ -1,4 +1,5 @@
 import re
+import bcrypt
 from collections.abc import Sequence
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -13,9 +14,15 @@ class Usuario(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nome: str = Field(index=True)
     email: str = Field(unique=True, index=True)
-    senha: str
+    senha_hash: str
     is_freelancer: bool = Field(default=False)
     saldo_conta: float = Field(default=0.0)
+
+class UsuarioCreate(SQLModel):
+    nome: str
+    email: str
+    senha: str
+    is_freelancer: bool = False
 
     @field_validator("senha")
     @classmethod
@@ -37,6 +44,13 @@ class Deposito(SQLModel):
 class LoginRequest(SQLModel):
     email: str
     senha: str
+
+# --- SEGURANÇA: HASH DE SENHA ---
+def hash_senha(senha: str) -> str:
+    return bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
+
+def verificar_senha(senha: str, senha_hash: str) -> bool:
+    return bcrypt.checkpw(senha.encode(), senha_hash.encode())
 
 class Servico(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -92,7 +106,13 @@ app.add_middleware(
 
 # --- ROTAS DE USUÁRIOS ---
 @app.post("/usuarios/")
-def create_usuario(usuario: Usuario, session: SessionDep) -> Usuario:
+def create_usuario(dados: UsuarioCreate, session: SessionDep) -> Usuario:
+    usuario = Usuario(
+        nome=dados.nome,
+        email=dados.email,
+        senha_hash=hash_senha(dados.senha),
+        is_freelancer=dados.is_freelancer,
+    )
     session.add(usuario)
     session.commit()
     session.refresh(usuario)
@@ -128,7 +148,7 @@ def login(credenciais: LoginRequest, session: SessionDep) -> Usuario:
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario não encontrado")
 
-    if usuario.senha != credenciais.senha:
+    if not verificar_senha(credenciais.senha, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Senha incorreta")
 
     return usuario
