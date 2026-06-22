@@ -1,9 +1,10 @@
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlalchemy.pool import StaticPool  # <-- Novo import necessário
 
-from src.main import app, get_session
+from src.main import ALGORITHM, SECRET_KEY, app, get_session
 
 # 1. Configura o motor SQLite com StaticPool para manter a memória persistente
 sqlite_url = "sqlite:///:memory:"
@@ -192,12 +193,19 @@ def test_criar_contrato_sem_saldo(client: TestClient):
     assert res_contrato.json()["detail"] == "Saldo insuficiente para contratar este serviço"
 
 def test_login_sucesso(client: TestClient):
-    """Testa se o login funciona com email e senha corretos."""
+    """Testa se o login funciona com email e senha corretos e devolve um token."""
     client.post("/usuarios/", json={"nome": "Login", "email": "login@teste.com", "senha": "senha123", "is_freelancer": False})
 
     response = client.post("/login", json={"email": "login@teste.com", "senha": "senha123"})
     assert response.status_code == 200
-    assert response.json()["email"] == "login@teste.com"
+    data = response.json()
+    assert data["usuario"]["email"] == "login@teste.com"
+    assert data["token_type"] == "bearer"
+    assert "senha" not in data["usuario"]
+    assert "senha_hash" not in data["usuario"]
+
+    payload = jwt.decode(data["access_token"], SECRET_KEY, algorithms=[ALGORITHM])
+    assert int(payload["sub"]) == data["usuario"]["id"]
 
 def test_login_usuario_nao_encontrado(client: TestClient):
     """Testa se o login retorna 404 quando o email não existe."""

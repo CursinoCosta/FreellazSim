@@ -1,11 +1,13 @@
+import jwt
 import pytest
 from unittest.mock import MagicMock
 from fastapi import HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
 
 from src.main import (
     Usuario, UsuarioCreate, Servico, Contrato, Deposito, ServicoUpdate, LoginRequest,
-    calcular_repasse_freelancer, hash_senha,
+    calcular_repasse_freelancer, hash_senha, criar_token, get_usuario_atual,
     create_usuario, read_usuario, depositar_fundos, list_usuarios,
     create_servico, update_servico, list_servicos,
     create_contrato, validar_contrato, cancelar_contrato, login
@@ -112,7 +114,9 @@ def test_mock_login_sucesso():
     user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha_hash=hash_senha("123456"))
     session_mock.exec.return_value.first.return_value = user_fake
     resultado = login(LoginRequest(email="m@m.com", senha="123456"), session_mock)
-    assert resultado.id == 1
+    assert resultado.usuario.id == 1
+    assert resultado.token_type == "bearer"
+    assert resultado.access_token
 
 def test_mock_login_usuario_nao_encontrado():
     session_mock = MagicMock()
@@ -127,6 +131,44 @@ def test_mock_login_senha_incorreta():
     session_mock.exec.return_value.first.return_value = user_fake
     with pytest.raises(HTTPException) as exc:
         login(LoginRequest(email="m@m.com", senha="errada"), session_mock)
+    assert exc.value.status_code == 401
+
+def _credenciais(token: str) -> HTTPAuthorizationCredentials:
+    return HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+
+def test_get_usuario_atual_token_valido():
+    session_mock = MagicMock()
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha_hash="hash")
+    session_mock.get.return_value = user_fake
+
+    resultado = get_usuario_atual(_credenciais(criar_token(1)), session_mock)
+    assert resultado.id == 1
+
+def test_get_usuario_atual_token_invalido():
+    session_mock = MagicMock()
+    with pytest.raises(HTTPException) as exc:
+        get_usuario_atual(_credenciais("token.invalido.aqui"), session_mock)
+    assert exc.value.status_code == 401
+
+def test_get_usuario_atual_token_expirado():
+    session_mock = MagicMock()
+    from datetime import datetime, timedelta, timezone
+    from src.main import SECRET_KEY, ALGORITHM
+
+    token_expirado = jwt.encode(
+        {"sub": "1", "exp": datetime.now(timezone.utc) - timedelta(minutes=1)},
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+    with pytest.raises(HTTPException) as exc:
+        get_usuario_atual(_credenciais(token_expirado), session_mock)
+    assert exc.value.status_code == 401
+
+def test_get_usuario_atual_usuario_nao_encontrado():
+    session_mock = MagicMock()
+    session_mock.get.return_value = None
+    with pytest.raises(HTTPException) as exc:
+        get_usuario_atual(_credenciais(criar_token(999)), session_mock)
     assert exc.value.status_code == 401
 
 # ==========================================
