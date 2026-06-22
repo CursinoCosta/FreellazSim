@@ -1,0 +1,29 @@
+.dashboard-freelancer {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.dashboard-freelancer-conteudo {
+  padding: 32px;
+  max-width: 1126px;
+  width: 100%;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.dashboard-freelancer-saldo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dashboard-freelancer-saldo span {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
