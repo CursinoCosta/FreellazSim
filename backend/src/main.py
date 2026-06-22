@@ -1,10 +1,14 @@
+import os
 import re
 import bcrypt
+import jwt
 from collections.abc import Sequence
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import field_validator
@@ -52,12 +56,31 @@ class LoginRequest(SQLModel):
     email: str
     senha: str
 
+class TokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+    usuario: UsuarioPublico
+
 # --- SEGURANÇA: HASH DE SENHA ---
 def hash_senha(senha: str) -> str:
     return bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
 
 def verificar_senha(senha: str, senha_hash: str) -> bool:
     return bcrypt.checkpw(senha.encode(), senha_hash.encode())
+
+# --- SEGURANÇA: TOKEN JWT ---
+SECRET_KEY = os.environ.get("SECRET_KEY", "freellazsim-dev-secret-change-me-32b")
+ALGORITHM = "HS256"
+EXPIRACAO_TOKEN_MINUTOS = 60
+
+def criar_token(usuario_id: int) -> str:
+    payload = {
+        "sub": str(usuario_id),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=EXPIRACAO_TOKEN_MINUTOS),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+bearer_scheme = HTTPBearer()
 
 class Servico(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -95,6 +118,24 @@ def get_session():
         yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
+
+def get_usuario_atual(
+    credenciais: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+    session: SessionDep,
+) -> Usuario:
+    try:
+        payload = jwt.decode(credenciais.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        usuario_id = int(payload["sub"])
+    except (jwt.PyJWTError, KeyError, ValueError):
+        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+
+    usuario = session.get(Usuario, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Usuario não encontrado")
+
+    return usuario
+
+UsuarioAtualDep = Annotated[Usuario, Depends(get_usuario_atual)]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -148,7 +189,7 @@ def depositar_fundos(usuario_id: int, deposito: Deposito, session: SessionDep):
     return {"mensagem": "Fundos adicionados com sucesso", "saldo_atual": usuario.saldo_conta}
 
 @app.post("/login")
-def login(credenciais: LoginRequest, session: SessionDep) -> Usuario:
+def login(credenciais: LoginRequest, session: SessionDep) -> TokenResponse:
     usuario = session.exec(
         select(Usuario).where(Usuario.email == credenciais.email)
     ).first()
@@ -158,7 +199,7 @@ def login(credenciais: LoginRequest, session: SessionDep) -> Usuario:
     if not verificar_senha(credenciais.senha, usuario.senha_hash):
         raise HTTPException(status_code=401, detail="Senha incorreta")
 
-    return usuario
+    return TokenResponse(access_token=criar_token(usuario.id), usuario=usuario)
 
 @app.get("/usuarios/")
 def list_usuarios(
