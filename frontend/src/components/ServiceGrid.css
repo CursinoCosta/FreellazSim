@@ -1,0 +1,15 @@
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 0 32px 64px;
+  max-width: 1126px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.service-grid-vazio {
+  padding: 32px;
+  text-align: center;
+  color: var(--text);
+}

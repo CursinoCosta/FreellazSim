@@ -1,8 +1,19 @@
+import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
+import ServiceGrid from '../components/ServiceGrid.jsx'
+import { listarServicos } from '../services/api.js'
 import heroImage from '../assets/hero.png'
 import './Home.css'
 
 function Home() {
+  const [servicos, setServicos] = useState([])
+
+  useEffect(() => {
+    listarServicos()
+      .then(setServicos)
+      .catch(() => setServicos([]))
+  }, [])
+
   return (
     <div className="home">
       <Navbar />
@@ -16,6 +27,7 @@ function Home() {
         </div>
         <img className="home-hero-image" src={heroImage} alt="" />
       </section>
+      <ServiceGrid servicos={servicos} />
     </div>
   )
 }

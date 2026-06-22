@@ -16,6 +16,16 @@ export async function criarUsuario(usuario) {
   return data
 }
 
+export async function listarServicos() {
+  const response = await fetch(`${API_BASE_URL}/servicos/`)
+
+  if (!response.ok) {
+    throw new Error('Não foi possível carregar os serviços')
+  }
+
+  return response.json()
+}
+
 export async function login(credenciais) {
   const response = await fetch(`${API_BASE_URL}/login`, {
     method: 'POST',
