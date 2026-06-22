@@ -11,6 +11,7 @@ function ServiceGrid({ servicos }) {
       {servicos.map((servico) => (
         <ServiceCard
           key={servico.id}
+          id={servico.id}
           titulo={servico.titulo}
           descricao={servico.descricao}
           preco={servico.preco}
