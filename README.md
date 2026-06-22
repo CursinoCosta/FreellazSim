@@ -22,6 +22,6 @@ O FreellazSim é um marketplace simplificado inspirado no Fiverr, conectando fre
 - **Testes de Frontend:** Vitest e React Testing Library para testes de componentes.
 - **Versionamento e CI/CD:** GitHub Actions para execução automatizada de testes multiplataforma e Codecov para publicação dos relatórios de cobertura.
 
-## Contribuindo
+## Desenvolvimento
 
 Instruções para configurar o ambiente e executar os testes localmente estão em [CONTRIBUTING.md](./CONTRIBUTING.md).
