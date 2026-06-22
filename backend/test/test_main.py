@@ -49,6 +49,8 @@ def test_create_usuario(client: TestClient):
     assert data["is_freelancer"] is True
     assert data["saldo_conta"] == 0.0
     assert "id" in data
+    assert "senha" not in data
+    assert "senha_hash" not in data
 
 def test_read_usuario(client: TestClient):
     post_response = client.post(
@@ -65,11 +67,28 @@ def test_read_usuario(client: TestClient):
     get_response = client.get(f"/usuarios/{user_id}")
     assert get_response.status_code == 200
     assert get_response.json()["nome"] == "Felipe Gomide"
+    assert "senha" not in get_response.json()
+    assert "senha_hash" not in get_response.json()
 
 def test_read_usuario_not_found(client: TestClient):
     response = client.get("/usuarios/999999")
     assert response.status_code == 404
     assert response.json() == {"detail": "Usuario não encontrado"}
+
+def test_list_usuarios_nao_expoe_senha(client: TestClient):
+    """Garante que a listagem de usuários nunca devolve a senha/hash."""
+    client.post(
+        "/usuarios/",
+        json={"nome": "Anyone", "email": "anyone@teste.com", "senha": "senha123"},
+    )
+
+    response = client.get("/usuarios/")
+    assert response.status_code == 200
+    usuarios = response.json()
+    assert len(usuarios) >= 1
+    for usuario in usuarios:
+        assert "senha" not in usuario
+        assert "senha_hash" not in usuario
 
 
 # (Adicione isso no final do arquivo test/test_main.py)
