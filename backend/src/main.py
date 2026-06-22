@@ -38,6 +38,13 @@ class UsuarioCreate(SQLModel):
             raise ValueError("E-mail com formato inválido")
         return v
 
+class UsuarioPublico(SQLModel):
+    id: int
+    nome: str
+    email: str
+    is_freelancer: bool
+    saldo_conta: float
+
 class Deposito(SQLModel):
     valor: float
 
@@ -106,7 +113,7 @@ app.add_middleware(
 
 # --- ROTAS DE USUÁRIOS ---
 @app.post("/usuarios/")
-def create_usuario(dados: UsuarioCreate, session: SessionDep) -> Usuario:
+def create_usuario(dados: UsuarioCreate, session: SessionDep) -> UsuarioPublico:
     usuario = Usuario(
         nome=dados.nome,
         email=dados.email,
@@ -119,7 +126,7 @@ def create_usuario(dados: UsuarioCreate, session: SessionDep) -> Usuario:
     return usuario
 
 @app.get("/usuarios/{usuario_id}")
-def read_usuario(usuario_id: int, session: SessionDep) -> Usuario:
+def read_usuario(usuario_id: int, session: SessionDep) -> UsuarioPublico:
     usuario = session.get(Usuario, usuario_id)
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario não encontrado")
@@ -156,7 +163,7 @@ def login(credenciais: LoginRequest, session: SessionDep) -> Usuario:
 @app.get("/usuarios/")
 def list_usuarios(
     session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
-) -> Sequence[Usuario]:
+) -> Sequence[UsuarioPublico]:
     return session.exec(select(Usuario).offset(offset).limit(limit)).all()
 
 # --- ROTAS DE SERVIÇOS ---
