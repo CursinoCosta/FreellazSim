@@ -5,7 +5,7 @@ function formatarPreco(preco) {
   return preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function ServicoDetalhes({ servico }) {
+function ServicoDetalhes({ servico = { titulo: '', descricao: '', preco: 0 } }) {
   return (
     <div className="servico-detalhes">
       <Navbar />

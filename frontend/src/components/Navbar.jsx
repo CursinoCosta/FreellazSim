@@ -1,18 +1,18 @@
+import { Link } from 'react-router-dom'
 import './Navbar.css'
 
 function Navbar() {
   return (
     <header className="navbar">
-      <a className="navbar-logo" href="#">
+      <Link className="navbar-logo" to="/">
         FreellazSim
-      </a>
+      </Link>
       <nav className="navbar-links">
-        <a href="#">Início</a>
-        <a href="#">Serviços</a>
-        <a href="#">Entrar</a>
-        <a className="navbar-cta" href="#">
+        <Link to="/">Início</Link>
+        <Link to="/login">Entrar</Link>
+        <Link className="navbar-cta" to="/cadastro">
           Cadastrar
-        </a>
+        </Link>
       </nav>
     </header>
   )
