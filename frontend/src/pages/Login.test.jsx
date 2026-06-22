@@ -2,12 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from '../context/AuthContext.jsx'
 import Login from './Login.jsx'
+
+function Wrapper({ children }) {
+  return (
+    <MemoryRouter>
+      <AuthProvider>{children}</AuthProvider>
+    </MemoryRouter>
+  )
+}
 
 describe('Login', () => {
   it('exibe mensagem de erro quando a senha é muito curta', async () => {
     const user = userEvent.setup()
-    render(<Login />, { wrapper: MemoryRouter })
+    render(<Login />, { wrapper: Wrapper })
 
     await user.type(screen.getByLabelText('Senha'), '123')
     await user.tab()
@@ -20,7 +29,7 @@ describe('Login', () => {
 
   it('não exibe mensagem de erro quando a senha é válida', async () => {
     const user = userEvent.setup()
-    render(<Login />, { wrapper: MemoryRouter })
+    render(<Login />, { wrapper: Wrapper })
 
     await user.type(screen.getByLabelText('Senha'), 'senha123')
     await user.tab()
