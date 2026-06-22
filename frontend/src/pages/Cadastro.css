@@ -67,3 +67,9 @@
 .cadastro-mensagem-erro {
   color: var(--danger);
 }
+
+.cadastro-erro-campo {
+  font-size: 13px;
+  color: var(--danger);
+  margin: -4px 0 0;
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
 import { criarUsuario } from '../services/api.js'
+import { validarEmail, validarSenha } from '../utils/validacao.js'
 import './Cadastro.css'
 
 function Cadastro() {
@@ -9,6 +10,12 @@ function Cadastro() {
   const [senha, setSenha] = useState('')
   const [isFreelancer, setIsFreelancer] = useState(false)
   const [mensagem, setMensagem] = useState(null)
+  const [senhaTocada, setSenhaTocada] = useState(false)
+  const [emailTocado, setEmailTocado] = useState(false)
+
+  const emailValido = validarEmail(email)
+  const senhaValida = validarSenha(senha)
+  const formularioValido = nome.trim().length > 0 && emailValido && senhaValida
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -42,7 +49,11 @@ function Cadastro() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          onBlur={() => setEmailTocado(true)}
         />
+        {emailTocado && email.length > 0 && !emailValido && (
+          <p className="cadastro-erro-campo">E-mail com formato inválido</p>
+        )}
 
         <label htmlFor="senha">Senha</label>
         <input
@@ -50,7 +61,13 @@ function Cadastro() {
           type="password"
           value={senha}
           onChange={(event) => setSenha(event.target.value)}
+          onBlur={() => setSenhaTocada(true)}
         />
+        {senhaTocada && senha.length > 0 && !senhaValida && (
+          <p className="cadastro-erro-campo">
+            A senha deve ter no mínimo 6 caracteres
+          </p>
+        )}
 
         <label className="cadastro-checkbox">
           <input
@@ -67,7 +84,9 @@ function Cadastro() {
           </p>
         )}
 
-        <button type="submit">Cadastrar</button>
+        <button type="submit" disabled={!formularioValido}>
+          Cadastrar
+        </button>
       </form>
     </div>
   )
