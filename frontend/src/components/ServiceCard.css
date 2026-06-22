@@ -1,0 +1,25 @@
+.service-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.service-card-titulo {
+  font-size: 18px;
+  margin: 0;
+}
+
+.service-card-descricao {
+  font-size: 14px;
+  color: var(--text);
+  flex-grow: 1;
+}
+
+.service-card-preco {
+  font-weight: 700;
+  color: var(--primary-dark);
+}
