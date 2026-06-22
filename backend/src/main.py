@@ -89,6 +89,11 @@ class Servico(SQLModel, table=True):
     preco: float
     freelancer_id: int = Field(foreign_key="usuario.id")
 
+class ServicoCreate(SQLModel):
+    titulo: str
+    descricao: str
+    preco: float
+
 class ServicoUpdate(SQLModel):
     descricao: str | None = None
     preco: float | None = None
@@ -99,6 +104,9 @@ class Contrato(SQLModel, table=True):
     cliente_id: int = Field(foreign_key="usuario.id")
     status: str = Field(default="pendente")  # pendente, validado, cancelado
     valor_pago: float
+
+class ContratoCreate(SQLModel):
+    servico_id: int
 
 # --- LÓGICA DE NEGÓCIO PURA ---
 def calcular_repasse_freelancer(valor_pago: float, taxa_plataforma: float = 0.10) -> float:
@@ -174,19 +182,20 @@ def read_usuario(usuario_id: int, session: SessionDep) -> UsuarioPublico:
     return usuario
 
 @app.patch("/usuarios/{usuario_id}/depositar")
-def depositar_fundos(usuario_id: int, deposito: Deposito, session: SessionDep):
+def depositar_fundos(
+    usuario_id: int, deposito: Deposito, session: SessionDep, usuario_atual: UsuarioAtualDep
+):
     if deposito.valor <= 0:
         raise HTTPException(status_code=400, detail="Valor do depósito deve ser maior que zero")
-    
-    usuario = session.get(Usuario, usuario_id)
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario não encontrado")
-    
-    usuario.saldo_conta += deposito.valor
-    session.add(usuario)
+
+    if usuario_atual.id != usuario_id:
+        raise HTTPException(status_code=403, detail="Só é possível depositar na própria conta")
+
+    usuario_atual.saldo_conta += deposito.valor
+    session.add(usuario_atual)
     session.commit()
-    session.refresh(usuario)
-    return {"mensagem": "Fundos adicionados com sucesso", "saldo_atual": usuario.saldo_conta}
+    session.refresh(usuario_atual)
+    return {"mensagem": "Fundos adicionados com sucesso", "saldo_atual": usuario_atual.saldo_conta}
 
 @app.post("/login")
 def login(credenciais: LoginRequest, session: SessionDep) -> TokenResponse:
@@ -209,20 +218,39 @@ def list_usuarios(
 
 # --- ROTAS DE SERVIÇOS ---
 @app.post("/servicos/")
-def create_servico(servico: Servico, session: SessionDep) -> Servico:
-    if servico.preco <= 0:
+def create_servico(
+    dados: ServicoCreate, session: SessionDep, usuario_atual: UsuarioAtualDep
+) -> Servico:
+    if not usuario_atual.is_freelancer:
+        raise HTTPException(status_code=403, detail="Apenas freelancers podem anunciar serviços")
+    if dados.preco <= 0:
         raise HTTPException(status_code=400, detail="O preço deve ser maior que zero")
+
+    servico = Servico(
+        titulo=dados.titulo,
+        descricao=dados.descricao,
+        preco=dados.preco,
+        freelancer_id=usuario_atual.id,
+    )
     session.add(servico)
     session.commit()
     session.refresh(servico)
     return servico
 
 @app.patch("/servicos/{servico_id}")
-def update_servico(servico_id: int, servico_update: ServicoUpdate, session: SessionDep) -> Servico:
+def update_servico(
+    servico_id: int,
+    servico_update: ServicoUpdate,
+    session: SessionDep,
+    usuario_atual: UsuarioAtualDep,
+) -> Servico:
     servico_db = session.get(Servico, servico_id)
     if not servico_db:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
-    
+
+    if usuario_atual.id != servico_db.freelancer_id:
+        raise HTTPException(status_code=403, detail="Só o freelancer dono do serviço pode editá-lo")
+
     if servico_update.preco is not None:
         if servico_update.preco <= 0:
             raise HTTPException(status_code=400, detail="O preço deve ser maior que zero")
@@ -244,30 +272,32 @@ def list_servicos(
 
 # --- ROTAS DE CONTRATOS ---
 @app.post("/contratos/")
-def create_contrato(contrato: Contrato, session: SessionDep) -> Contrato:
-    cliente = session.get(Usuario, contrato.cliente_id)
-    if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-        
-    servico = session.get(Servico, contrato.servico_id)
+def create_contrato(
+    dados: ContratoCreate, session: SessionDep, usuario_atual: UsuarioAtualDep
+) -> Contrato:
+    servico = session.get(Servico, dados.servico_id)
     if not servico:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
 
-    if cliente.saldo_conta < servico.preco:
+    if usuario_atual.saldo_conta < servico.preco:
         raise HTTPException(status_code=400, detail="Saldo insuficiente para contratar este serviço")
 
-    cliente.saldo_conta -= servico.preco
-    contrato.valor_pago = servico.preco
-    contrato.status = "pendente"
+    usuario_atual.saldo_conta -= servico.preco
+    contrato = Contrato(
+        servico_id=servico.id,
+        cliente_id=usuario_atual.id,
+        valor_pago=servico.preco,
+        status="pendente",
+    )
 
-    session.add(cliente)
+    session.add(usuario_atual)
     session.add(contrato)
     session.commit()
     session.refresh(contrato)
     return contrato
 
 @app.patch("/contratos/{contrato_id}/validar")
-def validar_contrato(contrato_id: int, session: SessionDep):
+def validar_contrato(contrato_id: int, session: SessionDep, usuario_atual: UsuarioAtualDep):
     contrato = session.get(Contrato, contrato_id)
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato não encontrado")
@@ -278,37 +308,35 @@ def validar_contrato(contrato_id: int, session: SessionDep):
     if not servico:
         raise HTTPException(status_code=404, detail="Serviço associado não encontrado")
 
-    freelancer = session.get(Usuario, servico.freelancer_id)
-    if not freelancer:
-        raise HTTPException(status_code=404, detail="Freelancer associado não encontrado")
-    
+    if usuario_atual.id != servico.freelancer_id:
+        raise HTTPException(status_code=403, detail="Só o freelancer dono do serviço pode validar o contrato")
+
     contrato.status = "validado"
     valor_repasse = calcular_repasse_freelancer(contrato.valor_pago)
-    freelancer.saldo_conta += valor_repasse
+    usuario_atual.saldo_conta += valor_repasse
 
     session.add(contrato)
-    session.add(freelancer)
+    session.add(usuario_atual)
     session.commit()
     session.refresh(contrato)
-    
+
     return {"mensagem": "Contrato validado com sucesso", "contrato": contrato}
 
 @app.patch("/contratos/{contrato_id}/cancelar")
-def cancelar_contrato(contrato_id: int, session: SessionDep):
+def cancelar_contrato(contrato_id: int, session: SessionDep, usuario_atual: UsuarioAtualDep):
     contrato = session.get(Contrato, contrato_id)
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato não encontrado")
     if contrato.status != "pendente":
         raise HTTPException(status_code=400, detail="Apenas contratos pendentes podem ser cancelados")
 
-    cliente = session.get(Usuario, contrato.cliente_id)
-    if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    if usuario_atual.id != contrato.cliente_id:
+        raise HTTPException(status_code=403, detail="Só o cliente dono do contrato pode cancelá-lo")
 
-    cliente.saldo_conta += contrato.valor_pago
+    usuario_atual.saldo_conta += contrato.valor_pago
     contrato.status = "cancelado"
 
-    session.add(cliente)
+    session.add(usuario_atual)
     session.add(contrato)
     session.commit()
     session.refresh(contrato)
