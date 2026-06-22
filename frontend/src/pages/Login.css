@@ -1,0 +1,67 @@
+.login {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  width: 100%;
+  margin: 48px auto;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.login-form label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-top: 8px;
+}
+
+.login-form input[type='email'],
+.login-form input[type='password'] {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.login-form button {
+  margin-top: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.login-form button:disabled {
+  background: var(--border);
+  color: var(--text);
+  cursor: not-allowed;
+}
+
+.login-erro-campo {
+  font-size: 13px;
+  color: var(--danger);
+  margin: -4px 0 0;
+}
+
+.login-mensagem {
+  font-size: 14px;
+}
+
+.login-mensagem-sucesso {
+  color: var(--primary-dark);
+}
+
+.login-mensagem-erro {
+  color: var(--danger);
+}
