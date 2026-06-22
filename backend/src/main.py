@@ -34,6 +34,10 @@ class Usuario(SQLModel, table=True):
 class Deposito(SQLModel):
     valor: float
 
+class LoginRequest(SQLModel):
+    email: str
+    senha: str
+
 class Servico(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     titulo: str = Field(index=True)
@@ -115,6 +119,19 @@ def depositar_fundos(usuario_id: int, deposito: Deposito, session: SessionDep):
     session.commit()
     session.refresh(usuario)
     return {"mensagem": "Fundos adicionados com sucesso", "saldo_atual": usuario.saldo_conta}
+
+@app.post("/login")
+def login(credenciais: LoginRequest, session: SessionDep) -> Usuario:
+    usuario = session.exec(
+        select(Usuario).where(Usuario.email == credenciais.email)
+    ).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario não encontrado")
+
+    if usuario.senha != credenciais.senha:
+        raise HTTPException(status_code=401, detail="Senha incorreta")
+
+    return usuario
 
 @app.get("/usuarios/")
 def list_usuarios(
