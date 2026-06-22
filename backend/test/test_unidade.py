@@ -4,8 +4,8 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from src.main import (
-    Usuario, Servico, Contrato, Deposito, ServicoUpdate, LoginRequest,
-    calcular_repasse_freelancer,
+    Usuario, UsuarioCreate, Servico, Contrato, Deposito, ServicoUpdate, LoginRequest,
+    calcular_repasse_freelancer, hash_senha,
     create_usuario, read_usuario, depositar_fundos, list_usuarios,
     create_servico, update_servico, list_servicos,
     create_contrato, validar_contrato, cancelar_contrato, login
@@ -17,26 +17,25 @@ from src.main import (
 
 def test_usuario_valido():
     # model_validate força o Pydantic a rodar todas as validações no dicionário
-    user = Usuario.model_validate({
-        "nome": "João", 
-        "email": "joao@teste.com", 
+    usuario = UsuarioCreate.model_validate({
+        "nome": "João",
+        "email": "joao@teste.com",
         "senha": "senha_segura"
     })
-    assert user.is_freelancer is False
-    assert user.saldo_conta == 0.0
+    assert usuario.is_freelancer is False
 
 def test_usuario_senha_curta():
     with pytest.raises(ValidationError, match="mínimo 6 caracteres"):
-        Usuario.model_validate({
-            "nome": "João", 
-            "email": "joao@teste.com", 
+        UsuarioCreate.model_validate({
+            "nome": "João",
+            "email": "joao@teste.com",
             "senha": "123"  # Senha menor que 6 caracteres
         })
 
 def test_usuario_email_invalido():
     with pytest.raises(ValidationError, match="formato inválido"):
-        Usuario.model_validate({
-            "nome": "João", 
+        UsuarioCreate.model_validate({
+            "nome": "João",
             "email": "joaosemarroba.com", # E-mail sem @
             "senha": "senha_segura"
         })
@@ -60,15 +59,16 @@ def test_calcular_repasse_isencao_taxa():
 
 def test_mock_create_usuario():
     session_mock = MagicMock()
-    user = Usuario(nome="Mock", email="m@m.com", senha="123456")
-    resultado = create_usuario(user, session_mock)
-    session_mock.add.assert_called_once_with(user)
+    dados = UsuarioCreate(nome="Mock", email="m@m.com", senha="123456")
+    resultado = create_usuario(dados, session_mock)
+    session_mock.add.assert_called_once()
     session_mock.commit.assert_called_once()
     assert resultado.nome == "Mock"
+    assert resultado.senha_hash != "123456"
 
 def test_mock_read_usuario_encontrado():
     session_mock = MagicMock()
-    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha="123456")
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha_hash="hash")
     session_mock.get.return_value = user_fake
     resultado = read_usuario(1, session_mock)
     assert resultado.id == 1
@@ -89,7 +89,7 @@ def test_mock_list_usuario_vazia():
 
 def test_mock_depositar_fundos_sucesso():
     session_mock = MagicMock()
-    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha="123456", saldo_conta=0.0)
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha_hash="hash", saldo_conta=0.0)
     session_mock.get.return_value = user_fake
     resultado = depositar_fundos(1, Deposito(valor=100.0), session_mock)
     assert resultado["saldo_atual"] == 100.0
@@ -109,7 +109,7 @@ def test_mock_depositar_fundos_nao_encontrado():
 
 def test_mock_login_sucesso():
     session_mock = MagicMock()
-    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha="123456")
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha_hash=hash_senha("123456"))
     session_mock.exec.return_value.first.return_value = user_fake
     resultado = login(LoginRequest(email="m@m.com", senha="123456"), session_mock)
     assert resultado.id == 1
@@ -123,7 +123,7 @@ def test_mock_login_usuario_nao_encontrado():
 
 def test_mock_login_senha_incorreta():
     session_mock = MagicMock()
-    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha="123456")
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha_hash=hash_senha("123456"))
     session_mock.exec.return_value.first.return_value = user_fake
     with pytest.raises(HTTPException) as exc:
         login(LoginRequest(email="m@m.com", senha="errada"), session_mock)
@@ -183,7 +183,7 @@ def test_mock_list_servicos():
 
 def test_mock_create_contrato_sucesso():
     session_mock = MagicMock()
-    cliente = Usuario(id=1, nome="C", email="c@c", senha="1", saldo_conta=500.0)
+    cliente = Usuario(id=1, nome="C", email="c@c", senha_hash="hash", saldo_conta=500.0)
     servico = Servico(id=1, titulo="S", descricao="D", preco=100.0, freelancer_id=2)
     
     # get(Usuario) retorna cliente, get(Servico) retorna servico
@@ -204,7 +204,7 @@ def test_mock_create_contrato_cliente_nao_encontrado():
 
 def test_mock_create_contrato_servico_nao_encontrado():
     session_mock = MagicMock()
-    cliente = Usuario(id=1, nome="C", email="c@c", senha="1", saldo_conta=500.0)
+    cliente = Usuario(id=1, nome="C", email="c@c", senha_hash="hash", saldo_conta=500.0)
     session_mock.get.side_effect = [cliente, None]
     with pytest.raises(HTTPException) as exc:
         create_contrato(Contrato(servico_id=99, cliente_id=1, valor_pago=0), session_mock)
@@ -212,7 +212,7 @@ def test_mock_create_contrato_servico_nao_encontrado():
 
 def test_mock_create_contrato_saldo_insuficiente():
     session_mock = MagicMock()
-    cliente = Usuario(id=1, nome="C", email="c@c", senha="1", saldo_conta=50.0)
+    cliente = Usuario(id=1, nome="C", email="c@c", senha_hash="hash", saldo_conta=50.0)
     servico = Servico(id=1, titulo="S", descricao="D", preco=100.0, freelancer_id=2)
     session_mock.get.side_effect = [cliente, servico]
     
@@ -224,7 +224,7 @@ def test_mock_validar_contrato_sucesso():
     session_mock = MagicMock()
     contrato = Contrato(id=1, servico_id=1, cliente_id=1, status="pendente", valor_pago=100.0)
     servico = Servico(id=1, titulo="S", descricao="D", preco=100.0, freelancer_id=2)
-    freela = Usuario(id=2, nome="F", email="f@f", senha="1", saldo_conta=0.0)
+    freela = Usuario(id=2, nome="F", email="f@f", senha_hash="hash", saldo_conta=0.0)
     
     session_mock.get.side_effect = [contrato, servico, freela]
     
@@ -267,7 +267,7 @@ def test_mock_validar_contrato_freela_nao_encontrado():
 def test_mock_cancelar_contrato_sucesso():
     session_mock = MagicMock()
     contrato = Contrato(id=1, servico_id=1, cliente_id=1, status="pendente", valor_pago=100.0)
-    cliente = Usuario(id=1, nome="C", email="c@c", senha="1", saldo_conta=0.0)
+    cliente = Usuario(id=1, nome="C", email="c@c", senha_hash="hash", saldo_conta=0.0)
     
     session_mock.get.side_effect = [contrato, cliente]
     

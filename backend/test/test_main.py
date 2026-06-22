@@ -56,7 +56,7 @@ def test_read_usuario(client: TestClient):
         json={
             "nome": "Felipe Gomide",
             "email": "felipe@teste.com",
-            "senha": "123",
+            "senha": "senha123",
             "is_freelancer": False
         }
     )
@@ -77,7 +77,7 @@ def test_read_usuario_not_found(client: TestClient):
 def test_create_servico_integracao(client: TestClient):
     """Teste de integração: valida a rota POST de serviços."""
     # Primeiro criamos um usuário para ser o dono do serviço
-    client.post("/usuarios/", json={"nome": "Free", "email": "f@f.com", "senha": "1", "is_freelancer": True})
+    client.post("/usuarios/", json={"nome": "Free", "email": "f@f.com", "senha": "senha123", "is_freelancer": True})
     
     response = client.post(
         "/servicos/",
@@ -108,11 +108,11 @@ def test_create_servico_preco_invalido(client: TestClient):
 def test_fluxo_completo_contrato_e_repasse(client: TestClient):
     """Teste de integração: valida a criação do contrato e a atualização correta do saldo."""
     # 1. Cria Freelancer
-    res_freela = client.post("/usuarios/", json={"nome": "Freela", "email": "freela@f.com", "senha": "1", "is_freelancer": True})
+    res_freela = client.post("/usuarios/", json={"nome": "Freela", "email": "freela@f.com", "senha": "senha123", "is_freelancer": True})
     freela_id = res_freela.json()["id"]
 
     # 2. Cria Cliente
-    res_cliente = client.post("/usuarios/", json={"nome": "Cliente", "email": "cliente@c.com", "senha": "1", "is_freelancer": False})
+    res_cliente = client.post("/usuarios/", json={"nome": "Cliente", "email": "cliente@c.com", "senha": "senha123", "is_freelancer": False})
     cliente_id = res_cliente.json()["id"]
     
     # 3. Deposita fundos na conta do Cliente (NOVO PASSO)
@@ -138,7 +138,7 @@ def test_fluxo_completo_contrato_e_repasse(client: TestClient):
 
 def test_depositar_fundos(client: TestClient):
     """Testa se o depósito incrementa o saldo corretamente."""
-    res_user = client.post("/usuarios/", json={"nome": "Investidor", "email": "inv@c.com", "senha": "1", "is_freelancer": False})
+    res_user = client.post("/usuarios/", json={"nome": "Investidor", "email": "inv@c.com", "senha": "senha123", "is_freelancer": False})
     user_id = res_user.json()["id"]
 
     res_deposito = client.patch(f"/usuarios/{user_id}/depositar", json={"valor": 500.0})
@@ -147,7 +147,7 @@ def test_depositar_fundos(client: TestClient):
 
 def test_atualizar_servico(client: TestClient):
     """Testa se o freelancer pode alterar o preço e a descrição do serviço."""
-    res_user = client.post("/usuarios/", json={"nome": "Editor", "email": "ed@f.com", "senha": "1", "is_freelancer": True})
+    res_user = client.post("/usuarios/", json={"nome": "Editor", "email": "ed@f.com", "senha": "senha123", "is_freelancer": True})
     user_id = res_user.json()["id"]
 
     res_servico = client.post("/servicos/", json={"titulo": "Edição de Vídeo", "descricao": "Básico", "preco": 100.0, "freelancer_id": user_id})
@@ -161,11 +161,11 @@ def test_atualizar_servico(client: TestClient):
 
 def test_criar_contrato_sem_saldo(client: TestClient):
     """Testa se o sistema barra a criação de contrato se o cliente não tiver dinheiro."""
-    res_user = client.post("/usuarios/", json={"nome": "Pobre", "email": "p@p.com", "senha": "1", "is_freelancer": False})
+    res_user = client.post("/usuarios/", json={"nome": "Pobre", "email": "p@p.com", "senha": "senha123", "is_freelancer": False})
     cliente_id = res_user.json()["id"]
     
     # Criamos um serviço qualquer
-    res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f2@f.com", "senha": "1", "is_freelancer": True})
+    res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f2@f.com", "senha": "senha123", "is_freelancer": True})
     res_servico = client.post("/servicos/", json={"titulo": "S", "descricao": "D", "preco": 500.0, "freelancer_id": res_freela.json()["id"]})
 
     res_contrato = client.post("/contratos/", json={"servico_id": res_servico.json()["id"], "cliente_id": cliente_id, "valor_pago": 500.0})
@@ -196,10 +196,10 @@ def test_login_senha_incorreta(client: TestClient):
 
 def test_cancelar_contrato_e_estorno(client: TestClient):
     """Testa o cancelamento de um contrato e a devolução do dinheiro para o cliente."""
-    res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f3@f.com", "senha": "1", "is_freelancer": True})
+    res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f3@f.com", "senha": "senha123", "is_freelancer": True})
     freela_id = res_freela.json()["id"]
     
-    res_cliente = client.post("/usuarios/", json={"nome": "C", "email": "c3@c.com", "senha": "1", "is_freelancer": False})
+    res_cliente = client.post("/usuarios/", json={"nome": "C", "email": "c3@c.com", "senha": "senha123", "is_freelancer": False})
     cliente_id = res_cliente.json()["id"]
     
     # Adiciona fundos para o cliente
