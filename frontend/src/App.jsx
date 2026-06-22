@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
+import RotaPrivada from './components/RotaPrivada.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import Cadastro from './pages/Cadastro.jsx'
@@ -18,8 +19,22 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/servicos/:id" element={<ServicoDetalhes />} />
-            <Route path="/dashboard/cliente" element={<DashboardCliente />} />
-            <Route path="/dashboard/freelancer" element={<DashboardFreelancer />} />
+            <Route
+              path="/dashboard/cliente"
+              element={
+                <RotaPrivada>
+                  <DashboardCliente />
+                </RotaPrivada>
+              }
+            />
+            <Route
+              path="/dashboard/freelancer"
+              element={
+                <RotaPrivada>
+                  <DashboardFreelancer />
+                </RotaPrivada>
+              }
+            />
           </Routes>
         </div>
       </BrowserRouter>
