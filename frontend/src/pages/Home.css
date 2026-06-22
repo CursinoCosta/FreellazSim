@@ -1,0 +1,28 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.home-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 64px 32px;
+  max-width: 1126px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.home-hero-text {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-hero-image {
+  width: 280px;
+  height: auto;
+}
