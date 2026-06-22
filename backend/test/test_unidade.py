@@ -4,11 +4,11 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from src.main import (
-    Usuario, Servico, Contrato, Deposito, ServicoUpdate,
+    Usuario, Servico, Contrato, Deposito, ServicoUpdate, LoginRequest,
     calcular_repasse_freelancer,
     create_usuario, read_usuario, depositar_fundos, list_usuarios,
     create_servico, update_servico, list_servicos,
-    create_contrato, validar_contrato, cancelar_contrato
+    create_contrato, validar_contrato, cancelar_contrato, login
 )
 
 # ==========================================
@@ -106,6 +106,28 @@ def test_mock_depositar_fundos_nao_encontrado():
     with pytest.raises(HTTPException) as exc:
         depositar_fundos(99, Deposito(valor=100.0), session_mock)
     assert exc.value.status_code == 404
+
+def test_mock_login_sucesso():
+    session_mock = MagicMock()
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha="123456")
+    session_mock.exec.return_value.first.return_value = user_fake
+    resultado = login(LoginRequest(email="m@m.com", senha="123456"), session_mock)
+    assert resultado.id == 1
+
+def test_mock_login_usuario_nao_encontrado():
+    session_mock = MagicMock()
+    session_mock.exec.return_value.first.return_value = None
+    with pytest.raises(HTTPException) as exc:
+        login(LoginRequest(email="ninguem@m.com", senha="123456"), session_mock)
+    assert exc.value.status_code == 404
+
+def test_mock_login_senha_incorreta():
+    session_mock = MagicMock()
+    user_fake = Usuario(id=1, nome="Mock", email="m@m.com", senha="123456")
+    session_mock.exec.return_value.first.return_value = user_fake
+    with pytest.raises(HTTPException) as exc:
+        login(LoginRequest(email="m@m.com", senha="errada"), session_mock)
+    assert exc.value.status_code == 401
 
 # ==========================================
 # 4. TESTES DE ROTAS MOCKADAS (SERVIÇOS)

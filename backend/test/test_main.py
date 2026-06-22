@@ -172,6 +172,28 @@ def test_criar_contrato_sem_saldo(client: TestClient):
     assert res_contrato.status_code == 400
     assert res_contrato.json()["detail"] == "Saldo insuficiente para contratar este serviço"
 
+def test_login_sucesso(client: TestClient):
+    """Testa se o login funciona com email e senha corretos."""
+    client.post("/usuarios/", json={"nome": "Login", "email": "login@teste.com", "senha": "senha123", "is_freelancer": False})
+
+    response = client.post("/login", json={"email": "login@teste.com", "senha": "senha123"})
+    assert response.status_code == 200
+    assert response.json()["email"] == "login@teste.com"
+
+def test_login_usuario_nao_encontrado(client: TestClient):
+    """Testa se o login retorna 404 quando o email não existe."""
+    response = client.post("/login", json={"email": "naoexiste@teste.com", "senha": "senha123"})
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Usuario não encontrado"}
+
+def test_login_senha_incorreta(client: TestClient):
+    """Testa se o login retorna 401 quando a senha está errada."""
+    client.post("/usuarios/", json={"nome": "Login2", "email": "login2@teste.com", "senha": "senha123", "is_freelancer": False})
+
+    response = client.post("/login", json={"email": "login2@teste.com", "senha": "errada"})
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Senha incorreta"}
+
 def test_cancelar_contrato_e_estorno(client: TestClient):
     """Testa o cancelamento de um contrato e a devolução do dinheiro para o cliente."""
     res_freela = client.post("/usuarios/", json={"nome": "F", "email": "f3@f.com", "senha": "1", "is_freelancer": True})
