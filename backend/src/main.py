@@ -342,3 +342,9 @@ def cancelar_contrato(contrato_id: int, session: SessionDep, usuario_atual: Usua
     session.refresh(contrato)
 
     return {"mensagem": "Contrato cancelado e valor estornado", "contrato": contrato}
+
+@app.get("/contratos/")
+def list_contratos(
+    session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100,
+) -> Sequence[Contrato]:
+    return session.exec(select(Contrato).offset(offset).limit(limit)).all()

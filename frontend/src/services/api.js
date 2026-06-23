@@ -108,3 +108,11 @@ export async function validarContrato(contratoId) {
   if (!response.ok) throw new Error(data.detail ?? 'Erro ao validar entrega')
   return data
 }
+
+export async function listarContratos() {
+  const response = await fetch(`${API_BASE_URL}/contratos/`, {
+    headers: getAuthHeaders()
+  })
+  if (!response.ok) throw new Error('Não foi possível carregar os contratos')
+  return response.json()
+}
