@@ -1,20 +1,33 @@
-import { Link } from 'react-router-dom'
-import './ServiceCard.css'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/useAuth.js'
 
-function formatarPreco(preco) {
-  return preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
+export default function ServiceCard({ servico }) {
+  const navigate = useNavigate()
+  const { usuario } = useAuth()
+  
+  // PROTEÇÃO: Se o objeto "servico" não existir, não tentamos renderizar nada
+  if (!servico) return null 
 
-function ServiceCard({ id, titulo, descricao, preco }) {
+  const isDono = usuario && usuario.id === servico.freelancer_id
+
   return (
-    <Link className="service-card-link" to={`/servicos/${id}`}>
-      <article className="service-card">
-        <h3 className="service-card-titulo">{titulo}</h3>
-        <p className="service-card-descricao">{descricao}</p>
-        <span className="service-card-preco">{formatarPreco(preco)}</span>
-      </article>
-    </Link>
+    <div className="service-card">
+      <h3>{servico.titulo || 'Serviço sem título'}</h3>
+      <p>{servico.descricao || 'Sem descrição'}</p>
+      <div className="service-card-footer">
+        <strong>R$ {servico.preco ? servico.preco.toFixed(2) : '0.00'}</strong>
+        
+        {isDono ? (
+          <button 
+            className="btn-edit" 
+            onClick={() => navigate(`/editar-servico/${servico.id}`)}
+          >
+            Editar
+          </button>
+        ) : (
+           <button onClick={() => navigate(`/servicos/${servico.id}`)}>Ver Detalhes</button>
+        )}
+      </div>
+    </div>
   )
 }
-
-export default ServiceCard

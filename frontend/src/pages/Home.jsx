@@ -46,7 +46,7 @@ export default function Home() {
             <p>Explore as opções disponíveis e encontre o que você precisa.</p>
           </div>
           
-          <ServiceGrid servicos={servicos} />
+          <ServiceGrid servicos={servicos.filter(s => s && s.id)} />
         </section>
       </main>
     </div>

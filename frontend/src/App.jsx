@@ -7,6 +7,7 @@ import Cadastro from './pages/Cadastro.jsx'
 import ServicoDetalhes from './pages/ServicoDetalhes.jsx'
 import DashboardCliente from './pages/DashboardCliente.jsx'
 import DashboardFreelancer from './pages/DashboardFreelancer.jsx'
+import EditarServico from './pages/EditarServico.jsx'
 import './App.css'
 
 function App() {
@@ -19,6 +20,16 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/servicos/:id" element={<ServicoDetalhes />} />
+            
+            <Route
+              path="/editar-servico/:id"
+              element={
+                <RotaPrivada>
+                  <EditarServico />
+                </RotaPrivada>
+              }
+            />
+
             <Route
               path="/dashboard/cliente"
               element={
