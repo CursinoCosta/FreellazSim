@@ -113,10 +113,12 @@ def calcular_repasse_freelancer(valor_pago: float, taxa_plataforma: float = 0.10
     return valor_pago * (1.0 - taxa_plataforma)
 
 # --- CONFIGURAÇÃO DO BANCO ---
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+# Permite que o Playwright passe um banco de testes via variável de ambiente
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///database.db")
 connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+
+# Se for SQLite, precisa do 'check_same_thread' para funcionar bem com múltiplas conexões
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
