@@ -1,29 +1,91 @@
-.dashboard-freelancer {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
 .dashboard-freelancer-conteudo {
-  padding: 32px;
-  max-width: 1126px;
-  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  text-align: left;
+  padding: 2rem;
 }
 
 .dashboard-freelancer-saldo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 24px;
-  margin-bottom: 32px;
-  border: 1px solid var(--border);
+  background-color: var(--white, #fff);
+  padding: 1.5rem;
   border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  margin-bottom: 2rem;
+  color: var(--primary, #8b5cf6);
 }
 
-.dashboard-freelancer-saldo span {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--primary-dark);
+.dashboard-freelancer-saldo h2 {
+  margin: 0;
+}
+
+.dashboard-freelancer-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.dashboard-freelancer-form-card {
+  flex: 1;
+  min-width: 300px;
+  background-color: var(--white, #fff);
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+}
+
+.dashboard-freelancer-form-card h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.freelancer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.freelancer-form label {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.freelancer-form input,
+.freelancer-form textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.freelancer-form button {
+  background-color: var(--primary, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.freelancer-form button:hover {
+  background-color: var(--primary-dark, #7c3aed);
+}
+
+.dashboard-freelancer-servicos {
+  flex: 2;
+}
+
+.dashboard-freelancer-servicos h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.mensagem-sucesso {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.mensagem-erro {
+  color: #ef4444;
+  font-weight: bold;
 }
