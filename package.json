@@ -16,6 +16,10 @@
   },
   "homepage": "https://github.com/CursinoCosta/FreellazSim#readme",
   "devDependencies": {
+<<<<<<< HEAD
+=======
+    "@playwright/test": "^1.61.0",
+>>>>>>> 0f7d755b8d249673336a9078eef3c0fe5ffe7556
     "@types/node": "^26.0.0"
   }
 }
