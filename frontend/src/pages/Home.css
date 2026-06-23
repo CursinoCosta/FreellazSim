@@ -1,28 +1,62 @@
 .home {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
+  background-color: #f9fafb;
+  min-height: 100vh;
 }
 
+/* --- Banner Superior (Hero) - Menor e Sóbrio --- */
 .home-hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 32px;
-  padding: 64px 32px;
-  max-width: 1126px;
-  width: 100%;
+  /* Fundo escuro sólido garante contraste máximo para texto branco */
+  background: #1e293b; 
+  color: #ffffff;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.home-hero-content {
+  max-width: 800px;
   margin: 0 auto;
 }
 
-.home-hero-text {
-  max-width: 520px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.home-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1.2rem;
+  color: #ffffff; /* Branco puro */
+  line-height: 1.1;
 }
 
-.home-hero-image {
-  width: 280px;
-  height: auto;
+.home-hero p {
+  font-size: 1.2rem;
+  margin-bottom: 2.5rem;
+  color: #c0c0c0; /* Branco puro, removendo o cinza */
+  line-height: 1.6;
+  opacity: 0.95; /* Leve transparência para suavizar sem perder legibilidade */
+}
+
+/* --- Ajuste dos Botões --- */
+.btn-primary {
+  background-color: #3b82f6; /* Azul destaque */
+  color: white;
+}
+
+.btn-secondary {
+  border: 2px solid #64748b;
+  color: white;
+}
+
+/* --- Seção da Vitrine --- */
+.home-servicos {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 2rem; /* Espaçamento mais compacto */
+}
+
+.home-section-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.home-section-header h2 {
+  font-size: 1.6rem;
+  color: #1f2937;
 }
