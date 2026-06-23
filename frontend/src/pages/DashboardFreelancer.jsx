@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar.jsx'
 import ServiceGrid from '../components/ServiceGrid.jsx'
-import { buscarUsuario, listarServicos, criarServico } from '../services/api.js'
+import { buscarUsuario, listarServicos, criarServico, depositarFundos } from '../services/api.js'
 import { useAuth } from '../context/useAuth.js'
 import './DashboardFreelancer.css'
 
@@ -27,7 +27,6 @@ export default function DashboardFreelancer() {
       setSaldo(dadosUsuario.saldo_conta)
 
       const todosServicos = await listarServicos()
-      // Filtra para exibir apenas os serviços que pertencem a este freelancer
       const filtrados = todosServicos.filter(s => s.freelancer_id === usuario.id)
       setMeusServicos(filtrados)
     } catch (error) {
@@ -53,9 +52,24 @@ export default function DashboardFreelancer() {
       setTitulo('')
       setDescricao('')
       setPreco('')
-      carregarDados() // Recarrega a grade para o serviço aparecer na hora
+      carregarDados() 
     } catch (error) {
       setMensagem({ tipo: 'erro', texto: error.message })
+    }
+  }
+
+  // Função para simular o depósito de saldo
+  async function handleAdicionarSaldo() {
+    const valorDigitado = window.prompt("Digite o valor a ser depositado (Ex: 500):")
+    const valor = parseFloat(valorDigitado)
+    
+    if (isNaN(valor) || valor <= 0) return
+
+    try {
+      await depositarFundos(usuario.id, valor)
+      carregarDados() // Atualiza o saldo na tela
+    } catch (error) {
+      alert("Erro ao depositar: " + error.message)
     }
   }
 
@@ -64,8 +78,18 @@ export default function DashboardFreelancer() {
       <Navbar />
       <section className="dashboard-freelancer-conteudo">
         
-        <div className="dashboard-freelancer-saldo">
-          <h2>Meu Saldo: {formatarPreco(saldo)}</h2>
+        {/* Cabeçalho do Saldo com o botão */}
+        <div className="dashboard-freelancer-saldo" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ margin: 0 }}>Meu Saldo</h2>
+            <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{formatarPreco(saldo)}</span>
+          </div>
+          <button 
+            onClick={handleAdicionarSaldo}
+            style={{ backgroundColor: '#10b981', color: 'white', padding: '0.75rem 1.5rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            + Adicionar Fundos
+          </button>
         </div>
 
         <div className="dashboard-freelancer-layout">
