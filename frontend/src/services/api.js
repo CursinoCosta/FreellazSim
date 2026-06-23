@@ -2,11 +2,16 @@ export const API_BASE_URL = 'http://localhost:8000'
 
 // Função auxiliar para injetar o token JWT nas requisições privadas
 function getAuthHeaders() {
-  const token = localStorage.getItem('token')
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  const bruto = localStorage.getItem('freellazsim.auth')
+  const headers = { 'Content-Type': 'application/json' }
+
+  if (bruto) {
+    const sessao = JSON.parse(bruto)
+    if (sessao.token) {
+      headers['Authorization'] = `Bearer ${sessao.token}`
+    }
   }
+  return headers
 }
 
 export async function criarUsuario(usuario) {
@@ -63,7 +68,13 @@ export async function criarServico(servico) {
     body: JSON.stringify(servico),
   })
   const data = await response.json()
-  if (!response.ok) throw new Error(data.detail ?? 'Erro ao publicar serviço')
+  
+  if (!response.ok) {
+    // Se o FastAPI devolver um array de erros (422), pegamos a mensagem exata
+    const msg = Array.isArray(data.detail) ? data.detail[0].msg : (data.detail ?? 'Erro ao publicar serviço')
+    throw new Error(msg)
+  }
+  
   return data
 }
 
